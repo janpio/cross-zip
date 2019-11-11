@@ -1,103 +1,94 @@
-module.exports = {
-  zip: zip,
-  zipSync: zipSync,
-  unzip: unzip,
-  unzipSync: unzipSync
+const cp = require('child_process')
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const rimraf = require('rimraf')
+
+function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
+  if (process.platform === 'win32') {
+    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, ${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }"`
+  } else {
+    if (includeBaseDirectory) {
+      const dir = path.dirname(sourceDirectoryName)
+      const base = path.basename(sourceDirectoryName)
+      return `cd ${JSON.stringify(dir)} && zip -r -y ${JSON.stringify(destinationArchiveFileName)} ${JSON.stringify(base)}`
+    }
+    return `cd ${JSON.stringify(sourceDirectoryName)} && zip -r -y ${JSON.stringify(destinationArchiveFileName)} ${JSON.stringify('.')}`
+  }
 }
 
-var cp = require('child_process')
-var fs = require('fs')
-var os = require('os')
-var path = require('path')
-var rimraf = require('rimraf')
-
-function zip (inPath, outPath, cb) {
-  if (!cb) cb = function () {}
+function getUnzipCommand (sourceArchiveFileName, destinationDirectoryName) {
   if (process.platform === 'win32') {
-    fs.stat(inPath, function (err, stats) {
-      if (err) return cb(err)
-      if (stats.isFile()) {
-        copyToTemp()
-      } else {
-        doZip()
-      }
-    })
+    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8, true); }"`
   } else {
-    doZip()
+    return `unzip -o ${JSON.stringify(sourceArchiveFileName)} -d ${JSON.stringify(destinationDirectoryName)}`
   }
+}
 
-  // Windows zip command cannot zip files, only directories. So move the file into
-  // a temporary directory before zipping.
-  function copyToTemp () {
-    fs.readFile(inPath, function (err, inFile) {
-      if (err) return cb(err)
-      var tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
-      fs.mkdir(tmpPath, function (err) {
-        if (err) return cb(err)
-        fs.writeFile(path.join(tmpPath, path.basename(inPath)), inFile, function (err) {
-          if (err) return cb(err)
-          inPath = tmpPath
-          doZip()
-        })
+function zip (input, output, includeBaseDirectory) {
+  return new Promise((resolve, reject) => {
+    fs.stat(input, (err, stats) => {
+      if (err) { reject(err); return }
+      rimraf(output, (err) => {
+        if (err) { reject(err); return }
+        if (stats.isDirectory()) {
+          cp.exec(getZipDirectoryCommand(input, output, includeBaseDirectory), (err) => {
+            if (err) { reject(err); return }
+            resolve()
+          })
+        } else {
+          const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+          const target = path.join(tmpPath, path.basename(input))
+          fs.mkdir(tmpPath, function (err) {
+            if (err) { reject(err); return }
+            fs.copyFile(input, target, (err) => {
+              if (err) { reject(err); return }
+              cp.exec(getZipDirectoryCommand(tmpPath, output, false), { maxBuffer: Infinity }, (err) => {
+                rimraf(tmpPath, (err) => {
+                  if (err) { reject(err); return }
+                  resolve()
+                })
+                if (err) reject(err)
+              })
+            })
+          })
+        }
       })
     })
-  }
-
-  // Windows zip command does not overwrite existing files. So do it manually first.
-  function doZip () {
-    if (process.platform === 'win32') {
-      rimraf(outPath, doZip2)
-    } else {
-      doZip2()
-    }
-  }
-
-  function doZip2 () {
-    cp.exec(getZipCommand(inPath, outPath), { maxBuffer: Infinity }, function (err) {
-      cb(err)
-    })
-  }
-}
-
-function zipSync (inPath, outPath) {
-  if (process.platform === 'win32') {
-    if (fs.statSync(inPath).isFile()) {
-      var inFile = fs.readFileSync(inPath)
-      var tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
-      fs.mkdirSync(tmpPath)
-      fs.writeFileSync(path.join(tmpPath, path.basename(inPath)), inFile)
-      inPath = tmpPath
-    }
-    rimraf.sync(outPath)
-  }
-  cp.execSync(getZipCommand(inPath, outPath))
-}
-
-function getZipCommand (inPath, outPath) {
-  if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${inPath}', '${outPath}', '1', 'true', [System.Text.Encoding]::UTF8); }"`
-  } else {
-    var dirPath = path.dirname(inPath)
-    var fileName = path.basename(inPath)
-    return `cd ${JSON.stringify(dirPath)} && zip -r -y ${JSON.stringify(outPath)} ${JSON.stringify(fileName)}`
-  }
-}
-
-function unzip (inPath, outPath, cb) {
-  if (!cb) cb = function () {}
-  cp.exec(getUnzipCommand(inPath, outPath), { maxBuffer: Infinity }, function (err) {
-    cb(err)
   })
 }
 
-function unzipSync (inPath, outPath) {
-  cp.execSync(getUnzipCommand(inPath, outPath))
+function zipSync (input, output, includeBaseDirectory) {
+  const stats = fs.statSync(input)
+  rimraf.sync(output)
+  if (stats.isDirectory()) {
+    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory))
+    return
+  }
+  const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+  const target = path.join(tmpPath, path.basename(input))
+  fs.mkdirSync(tmpPath)
+  fs.copyFileSync(input, target)
+  cp.execSync(getZipDirectoryCommand(input, output, false), { maxBuffer: Infinity })
+  rimraf.sync(tmpPath)
 }
 
-function getUnzipCommand (inPath, outPath) {
-  if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::ExtractToDirectory('${inPath}', '${outPath}'); }"`
-  } else {
-    return `unzip -o ${JSON.stringify(inPath)} -d ${JSON.stringify(outPath)}`
-  }
+function unzip (input, output) {
+  return new Promise((resolve, reject) => {
+    cp.exec(getUnzipCommand(input, output), { maxBuffer: Infinity }, function (err) {
+      if (err) { reject(err); return }
+      resolve()
+    })
+  })
+}
+
+function unzipSync (input, output) {
+  cp.execSync(getUnzipCommand(input, output), { maxBuffer: Infinity })
+}
+
+module.exports = {
+  zip,
+  zipSync,
+  unzip,
+  unzipSync
 }

@@ -1,21 +1,19 @@
 {
-  "name": "cross-zip",
+  "name": "@tybys/cross-zip",
   "description": "Cross-platform .zip file creation",
-  "version": "2.1.6",
+  "version": "3.0.0-dev",
   "author": {
-    "name": "Feross Aboukhadijeh",
-    "email": "feross@feross.org",
-    "url": "http://feross.org/"
+    "name": "toyobayashi",
+    "email": "lifenglin314@outlook.com"
   },
   "bugs": {
-    "url": "https://github.com/feross/cross-zip/issues"
+    "url": "https://github.com/toyobayashi/cross-zip/issues"
   },
   "devDependencies": {
-    "mkdirp": "^0.5.1",
-    "standard": "*",
-    "tape": "^4.0.0"
+    "fs-extra": "^8.1.0",
+    "mocha": "^6.2.2"
   },
-  "homepage": "https://github.com/feross/cross-zip",
+  "homepage": "https://github.com/toyobayashi/cross-zip",
   "keywords": [
     "ZIP",
     "cross platform",
@@ -30,10 +28,10 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/feross/cross-zip.git"
+    "url": "git://github.com/toyobayashi/cross-zip.git"
   },
   "scripts": {
-    "test": "standard && tape test/*.js"
+    "test": "mocha"
   },
   "dependencies": {
     "rimraf": "^3.0.0"

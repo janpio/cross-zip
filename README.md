@@ -1,50 +1,45 @@
-# cross-zip [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url]
+# cross-zip
 
-[travis-image]: https://img.shields.io/travis/feross/cross-zip/master.svg
-[travis-url]: https://travis-ci.org/feross/cross-zip
-[npm-image]: https://img.shields.io/npm/v/cross-zip.svg
-[npm-url]: https://npmjs.org/package/cross-zip
-[downloads-image]: https://img.shields.io/npm/dm/cross-zip.svg
-[downloads-url]: https://npmjs.org/package/cross-zip
-[standard-image]: https://img.shields.io/badge/code_style-standard-brightgreen.svg
-[standard-url]: https://standardjs.com
+Fork from [https://github.com/feross/cross-zip](https://github.com/feross/cross-zip)
 
-### Cross-platform .zip file creation
+Cross-platform .zip file creation
 
-## install
+## Install
 
 ```
-npm install cross-zip
+npm install @tybys/cross-zip
 ```
 
-## usage
+## Usage
 
-```js
-var zip = require('cross-zip')
+``` js
+const zip = require('@tybys/cross-zip')
 
-var inPath = path.join(__dirname, 'myFolder') // folder to zip
-var outPath = path.join(__dirname, 'myFile.zip') // name of output zip file
+const input = path.join(__dirname, 'myFolder') // folder to zip
+const output = path.join(__dirname, 'myFile.zip') // name of output zip file
 
-zip.zipSync(inPath, outPath)
+zip.zipSync(input, output)
 ```
 
-## api
+## API
 
-### `zip.zip(inPath, outPath, [callback])`
+### `zip.zip(input, output [, includeBaseDirectory])`
 
-Zip the folder at `inPath` and save it to a .zip file at `outPath`. If a `callback`
-is passed, then it is called with an `Error` or `null`.
+Zip the folder at `input` and save it to a .zip file at `output`. 
 
-### `zip.zipSync(inPath, outPath)`
+`includeBaseDirectory`: `true` to include the directory name from `input` at the root of the archive; `false` to include only the contents of the directory.
+
+Return `Promise<void>`.
+
+### `zip.zipSync(input, output [, includeBaseDirectory])`
 
 Sync version of `zip.zip`.
 
-### `zip.unzip(inPath, outPath, [callback])`
+### `zip.unzip(input, output)`
 
-Unzip the .zip file at `inPath` into the folder at `outPath`. If a `callback` is
-passed, then it is called with an `Error` or `null`.
+Unzip the .zip file at `input` into the folder at `output`. Return `Promise<void>`.
 
-### `zip.unzipSync(inPath, outPath)`
+### `zip.unzipSync(input, output)`
 
 Sync version of `zip.unzip`.
 
@@ -57,14 +52,10 @@ These come **pre-installed** on Windows 8 or later.
 On Windows 7 or earlier, you will need to install these manually in order for
 `cross-zip` to function correctly.
 
-## reference
+## Reference
 
 - [Stack Overflow - zipping from command line in Windows](https://stackoverflow.com/questions/17546016/how-can-you-zip-or-unzip-from-the-command-prompt-using-only-windows-built-in-ca)
 
-## related
+## License
 
-- [cross-zip-cli](https://github.com/jprichardson/cross-zip-cli): CLI version of cross-zip.
-
-## license
-
-MIT. Copyright (c) [Feross Aboukhadijeh](http://feross.org).
+MIT.
