@@ -4,6 +4,10 @@ const path = require('path')
 const fs = require('fs-extra')
 const ObjectId = require('@tybys/oid')
 
+const execOptions = {
+  maxBuffer: Infinity
+}
+
 function getTempDirName () {
   return 'cross-zip-' + new ObjectId().toHexString()
 }
@@ -60,8 +64,7 @@ function zip (input, output, includeBaseDirectory) {
         if (err) { reject(err); return }
         if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
         if (stats.isDirectory()) {
-          const cmd = getZipDirectoryCommand(input, output, includeBaseDirectory)
-          cp.exec(cmd, (err) => {
+          cp.exec(getZipDirectoryCommand(input, output, includeBaseDirectory), execOptions, (err) => {
             if (err) { reject(err); return }
             fs.stat(output, (err, stats) => {
               if (err) { reject(err); return }
@@ -75,7 +78,7 @@ function zip (input, output, includeBaseDirectory) {
             if (err) { reject(err); return }
             fs.copy(input, target, (err) => {
               if (err) { reject(err); return }
-              cp.exec(getZipDirectoryCommand(tmpPath, output, false), { maxBuffer: Infinity }, (err) => {
+              cp.exec(getZipDirectoryCommand(tmpPath, output, false), execOptions, (err) => {
                 fs.remove(tmpPath, (err) => {
                   if (err) { reject(err); return }
                   fs.stat(output, (err, stats) => {
@@ -98,14 +101,14 @@ function zipSync (input, output, includeBaseDirectory) {
   fs.removeSync(output)
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
-    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory), { maxBuffer: Infinity })
+    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory), execOptions)
     return fs.statSync(output).size
   }
   const tmpPath = path.join(os.tmpdir(), getTempDirName())
   const target = path.join(tmpPath, path.basename(input))
   fs.mkdirsSync(tmpPath)
   fs.copySync(input, target)
-  const size = zipSync(tmpPath, output)
+  const size = zipSync(tmpPath, output, false)
   fs.removeSync(tmpPath)
   return size
 }
@@ -116,7 +119,7 @@ function unzip (input, output) {
     if (process.platform === 'win32' && fs.existsSync(output)) {
       if (fs.statSync(output).isDirectory()) {
         const tmpPath = path.join(os.tmpdir(), getTempDirName())
-        cp.exec(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity }, function (err) {
+        cp.exec(getUnzipCommand(input, tmpPath), execOptions, function (err) {
           if (err) { reject(err); return }
           fs.copy(tmpPath, output, (err) => {
             fs.remove(tmpPath, (err) => {
@@ -131,7 +134,7 @@ function unzip (input, output) {
         return
       }
     } else {
-      cp.exec(getUnzipCommand(input, output), { maxBuffer: Infinity }, function (err) {
+      cp.exec(getUnzipCommand(input, output), execOptions, function (err) {
         if (err) { reject(err); return }
         resolve()
       })
@@ -144,14 +147,14 @@ function unzipSync (input, output) {
   if (process.platform === 'win32' && fs.existsSync(output)) {
     if (fs.statSync(output).isDirectory()) {
       const tmpPath = path.join(os.tmpdir(), getTempDirName())
-      cp.execSync(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity })
+      cp.execSync(getUnzipCommand(input, tmpPath), execOptions)
       fs.copySync(tmpPath, output)
       fs.removeSync(tmpPath)
     } else {
       throw new Error(`"${output}" is not a directory.`)
     }
   } else {
-    cp.execSync(getUnzipCommand(input, output), { maxBuffer: Infinity })
+    cp.execSync(getUnzipCommand(input, output), execOptions)
   }
 }
 

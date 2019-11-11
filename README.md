@@ -14,36 +14,51 @@ npm install @tybys/cross-zip
 
 ## Usage
 
+### JavaScript
+
 ``` js
-const zip = require('@tybys/cross-zip')
+const path = require('path')
+const crossZip = require('@tybys/cross-zip')
 
 const input = path.join(__dirname, 'myFolder') // folder to zip
 const output = path.join(__dirname, 'myFile.zip') // name of output zip file
 
-zip.zipSync(input, output)
+crossZip.zipSync(input, output)
+```
+
+### TypeScript
+
+``` ts
+import * as path from 'path'
+import * as crossZip from '@tybys/cross-zip'
+
+const input = path.join(__dirname, 'myFolder') // folder to zip
+const output = path.join(__dirname, 'myFile.zip') // name of output zip file
+
+crossZip.zipSync(input, output)
 ```
 
 ## API
 
-### `zip.zip(input, output [, includeBaseDirectory])`
+### `crossZip.zip(input, output [, includeBaseDirectory])`
 
-Zip the folder at `input` and save it to a .zip file at `output`. 
+Zip the folder or file at `input` and save it to a .zip file at `output`. 
 
 `includeBaseDirectory`: `true` to include the directory name from `input` at the root of the archive; `false` to include only the contents of the directory.
 
 Return `Promise<number>` (size of archive).
 
-### `zip.zipSync(input, output [, includeBaseDirectory])`
+### `crossZip.zipSync(input, output [, includeBaseDirectory])`
 
-Sync version of `zip.zip`.
+Sync version of `crossZip.zip`.
 
-### `zip.unzip(input, output)`
+### `crossZip.unzip(input, output)`
 
 Unzip the .zip file at `input` into the folder at `output`. Return `Promise<void>`.
 
-### `zip.unzipSync(input, output)`
+### `crossZip.unzipSync(input, output)`
 
-Sync version of `zip.unzip`.
+Sync version of `crossZip.unzip`.
 
 ## Windows users
 
