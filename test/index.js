@@ -6,7 +6,7 @@ const crossZip = require('..')
 const testTmpDir = path.join(__dirname, 'tmp')
 
 describe('Zip', function () {
-  it('Zip dir without base dir', async function () {
+  it('Zip a dir without base dir', async function () {
     this.timeout(Infinity)
     const archive = path.join(testTmpDir, `without-base-${process.platform}.zip`)
     const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
@@ -18,7 +18,7 @@ describe('Zip', function () {
     assert.ok(!fs.existsSync(path.join(unzipDir, 'content')), 'Base dir exists')
   })
 
-  it('Zip dir with base dir', async function () {
+  it('Zip a dir with base dir', async function () {
     this.timeout(Infinity)
     const archive = path.join(testTmpDir, `with-base-${process.platform}.zip`)
     const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
@@ -38,6 +38,39 @@ describe('Zip', function () {
     assert.ok(typeof size === 'number', `zip() should return Promise<number> but ${typeof size}`)
     assert.ok(fs.existsSync(archive), 'Zip failed')
     await crossZip.unzip(archive, unzipDir)
+    assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'file.txt')), 'file not exists')
+  })
+
+  it('Zip a dir without base dir (sync)', function () {
+    const archive = path.join(testTmpDir, `sync-without-base-${process.platform}.zip`)
+    const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
+    const size = crossZip.zipSync(path.join(__dirname, 'content'), archive)
+    assert.ok(typeof size === 'number', `zipSync() should return number but ${typeof size}`)
+    assert.ok(fs.existsSync(archive), 'Zip failed')
+    crossZip.unzipSync(archive, unzipDir)
+    assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
+    assert.ok(!fs.existsSync(path.join(unzipDir, 'content')), 'Base dir exists')
+  })
+
+  it('Zip a dir with base dir (sync)', function () {
+    const archive = path.join(testTmpDir, `sync-with-base-${process.platform}.zip`)
+    const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
+    const size = crossZip.zipSync(path.join(__dirname, 'content'), archive, true)
+    assert.ok(typeof size === 'number', `zipSync() should return number but ${typeof size}`)
+    assert.ok(fs.existsSync(archive), 'Zip failed')
+    crossZip.unzipSync(archive, unzipDir)
+    assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'content')), 'Base dir not exists')
+  })
+
+  it('Zip a file (sync)', function () {
+    const archive = path.join(testTmpDir, `sync-file-${process.platform}.zip`)
+    const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
+    const size = crossZip.zipSync(path.join(__dirname, 'content/file.txt'), archive)
+    assert.ok(typeof size === 'number', `zipSync() should return number but ${typeof size}`)
+    assert.ok(fs.existsSync(archive), 'Zip failed')
+    crossZip.unzipSync(archive, unzipDir)
     assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
     assert.ok(fs.existsSync(path.join(unzipDir, 'file.txt')), 'file not exists')
   })

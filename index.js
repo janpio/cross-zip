@@ -71,9 +71,9 @@ function zip (input, output, includeBaseDirectory) {
         } else {
           const tmpPath = path.join(os.tmpdir(), getTempDirName())
           const target = path.join(tmpPath, path.basename(input))
-          fs.mkdir(tmpPath, function (err) {
+          fs.mkdirs(tmpPath, function (err) {
             if (err) { reject(err); return }
-            fs.copyFile(input, target, (err) => {
+            fs.copy(input, target, (err) => {
               if (err) { reject(err); return }
               cp.exec(getZipDirectoryCommand(tmpPath, output, false), { maxBuffer: Infinity }, (err) => {
                 fs.remove(tmpPath, (err) => {
@@ -98,16 +98,16 @@ function zipSync (input, output, includeBaseDirectory) {
   fs.removeSync(output)
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
-    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory))
-    return
+    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory), { maxBuffer: Infinity })
+    return fs.statSync(output).size
   }
   const tmpPath = path.join(os.tmpdir(), getTempDirName())
   const target = path.join(tmpPath, path.basename(input))
-  fs.mkdirSync(tmpPath)
-  fs.copyFileSync(input, target)
-  cp.execSync(getZipDirectoryCommand(input, output, false), { maxBuffer: Infinity })
+  fs.mkdirsSync(tmpPath)
+  fs.copySync(input, target)
+  const size = zipSync(tmpPath, output)
   fs.removeSync(tmpPath)
-  return fs.statSync(output).size
+  return size
 }
 
 function unzip (input, output) {
@@ -145,7 +145,7 @@ function unzipSync (input, output) {
     if (fs.statSync(output).isDirectory()) {
       const tmpPath = path.join(os.tmpdir(), getTempDirName())
       cp.execSync(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity })
-      fs.copySync(tmpPath, ouput)
+      fs.copySync(tmpPath, output)
       fs.removeSync(tmpPath)
     } else {
       throw new Error(`"${output}" is not a directory.`)
