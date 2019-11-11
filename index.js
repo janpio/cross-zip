@@ -1,7 +1,12 @@
 const cp = require('child_process')
-const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
+const fs = require('fs-extra')
+const ObjectId = require('@tybys/oid')
+
+function getTempDirName () {
+  return 'cross-zip-' + new ObjectId().toHexString()
+}
 
 function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
   if (process.platform === 'win32') {
@@ -64,7 +69,7 @@ function zip (input, output, includeBaseDirectory) {
             })
           })
         } else {
-          const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+          const tmpPath = path.join(os.tmpdir(), getTempDirName())
           const target = path.join(tmpPath, path.basename(input))
           fs.mkdir(tmpPath, function (err) {
             if (err) { reject(err); return }
@@ -96,7 +101,7 @@ function zipSync (input, output, includeBaseDirectory) {
     cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory))
     return
   }
-  const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+  const tmpPath = path.join(os.tmpdir(), getTempDirName())
   const target = path.join(tmpPath, path.basename(input))
   fs.mkdirSync(tmpPath)
   fs.copyFileSync(input, target)
@@ -110,7 +115,7 @@ function unzip (input, output) {
     if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
     if (process.platform === 'win32' && fs.existsSync(output)) {
       if (fs.statSync(output).isDirectory()) {
-        const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+        const tmpPath = path.join(os.tmpdir(), getTempDirName())
         cp.exec(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity }, function (err) {
           if (err) { reject(err); return }
           fs.copy(tmpPath, output, (err) => {
@@ -138,7 +143,7 @@ function unzipSync (input, output) {
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (process.platform === 'win32' && fs.existsSync(output)) {
     if (fs.statSync(output).isDirectory()) {
-      const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+      const tmpPath = path.join(os.tmpdir(), getTempDirName())
       cp.execSync(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity })
       fs.copySync(tmpPath, ouput)
       fs.removeSync(tmpPath)

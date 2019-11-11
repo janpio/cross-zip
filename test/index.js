@@ -29,4 +29,16 @@ describe('Zip', function () {
     assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
     assert.ok(fs.existsSync(path.join(unzipDir, 'content')), 'Base dir not exists')
   })
+
+  it('Zip a file', async function () {
+    this.timeout(Infinity)
+    const archive = path.join(testTmpDir, `file-${process.platform}.zip`)
+    const unzipDir = path.join(path.dirname(archive), path.basename(archive, '.zip'))
+    const size = await crossZip.zip(path.join(__dirname, 'content/file.txt'), archive)
+    assert.ok(typeof size === 'number', `zip() should return Promise<number> but ${typeof size}`)
+    assert.ok(fs.existsSync(archive), 'Zip failed')
+    await crossZip.unzip(archive, unzipDir)
+    assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'file.txt')), 'file not exists')
+  })
 })
