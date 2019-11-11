@@ -29,7 +29,7 @@ Zip the folder at `input` and save it to a .zip file at `output`.
 
 `includeBaseDirectory`: `true` to include the directory name from `input` at the root of the archive; `false` to include only the contents of the directory.
 
-Return `Promise<void>`.
+Return `Promise<number>` (size of archive).
 
 ### `zip.zipSync(input, output [, includeBaseDirectory])`
 

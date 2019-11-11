@@ -1,8 +1,7 @@
 const cp = require('child_process')
-const fs = require('fs')
+const fs = require('fs-extra')
 const os = require('os')
 const path = require('path')
-const rimraf = require('rimraf')
 
 function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
   if (process.platform === 'win32') {
@@ -19,7 +18,7 @@ function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName
 
 function getUnzipCommand (sourceArchiveFileName, destinationDirectoryName) {
   if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8, $true); }"`
+    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8); }"`
   } else {
     return `unzip -o ${JSON.stringify(sourceArchiveFileName)} -d ${JSON.stringify(destinationDirectoryName)}`
   }
@@ -41,7 +40,7 @@ function ensureDir (dir) {
   }
 
   try {
-    fs.mkdirSync(dir, { recursive: true })
+    fs.mkdirsSync(dir)
     return true
   } catch (err) {
     return false
@@ -52,14 +51,17 @@ function zip (input, output, includeBaseDirectory) {
   return new Promise((resolve, reject) => {
     fs.stat(input, (err, stats) => {
       if (err) { reject(err); return }
-      rimraf(output, (err) => {
+      fs.remove(output, (err) => {
         if (err) { reject(err); return }
         if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
         if (stats.isDirectory()) {
           const cmd = getZipDirectoryCommand(input, output, includeBaseDirectory)
-          cp.exec(cmd, (err, stdout) => {
+          cp.exec(cmd, (err) => {
             if (err) { reject(err); return }
-            resolve()
+            fs.stat(output, (err, stats) => {
+              if (err) { reject(err); return }
+              resolve(stats.size)
+            })
           })
         } else {
           const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
@@ -69,9 +71,12 @@ function zip (input, output, includeBaseDirectory) {
             fs.copyFile(input, target, (err) => {
               if (err) { reject(err); return }
               cp.exec(getZipDirectoryCommand(tmpPath, output, false), { maxBuffer: Infinity }, (err) => {
-                rimraf(tmpPath, (err) => {
+                fs.remove(tmpPath, (err) => {
                   if (err) { reject(err); return }
-                  resolve()
+                  fs.stat(output, (err, stats) => {
+                    if (err) { reject(err); return }
+                    resolve(stats.size)
+                  })
                 })
                 if (err) reject(err)
               })
@@ -85,7 +90,7 @@ function zip (input, output, includeBaseDirectory) {
 
 function zipSync (input, output, includeBaseDirectory) {
   const stats = fs.statSync(input)
-  rimraf.sync(output)
+  fs.removeSync(output)
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
     cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory))
@@ -96,20 +101,53 @@ function zipSync (input, output, includeBaseDirectory) {
   fs.mkdirSync(tmpPath)
   fs.copyFileSync(input, target)
   cp.execSync(getZipDirectoryCommand(input, output, false), { maxBuffer: Infinity })
-  rimraf.sync(tmpPath)
+  fs.removeSync(tmpPath)
+  return fs.statSync(output).size
 }
 
 function unzip (input, output) {
   return new Promise((resolve, reject) => {
-    cp.exec(getUnzipCommand(input, output), { maxBuffer: Infinity }, function (err) {
-      if (err) { reject(err); return }
-      resolve()
-    })
+    if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
+    if (process.platform === 'win32' && fs.existsSync(output)) {
+      if (fs.statSync(output).isDirectory()) {
+        const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+        cp.exec(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity }, function (err) {
+          if (err) { reject(err); return }
+          fs.copy(tmpPath, output, (err) => {
+            fs.remove(tmpPath, (err) => {
+              if (err) { reject(err); return } 
+              resolve()
+            })
+            if (err) reject(err)
+          })
+        })
+      } else {
+        reject(new Error(`"${output}" is not a directory.`))
+        return
+      }
+    } else {
+      cp.exec(getUnzipCommand(input, output), { maxBuffer: Infinity }, function (err) {
+        if (err) { reject(err); return }
+        resolve()
+      })
+    }
   })
 }
 
 function unzipSync (input, output) {
-  cp.execSync(getUnzipCommand(input, output), { maxBuffer: Infinity })
+  if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
+  if (process.platform === 'win32' && fs.existsSync(output)) {
+    if (fs.statSync(output).isDirectory()) {
+      const tmpPath = path.join(os.tmpdir(), 'cross-zip-' + Date.now())
+      cp.execSync(getUnzipCommand(input, tmpPath), { maxBuffer: Infinity })
+      fs.copySync(tmpPath, ouput)
+      fs.removeSync(tmpPath)
+    } else {
+      throw new Error(`"${output}" is not a directory.`)
+    }
+  } else {
+    cp.execSync(getUnzipCommand(input, output), { maxBuffer: Infinity })
+  }
 }
 
 module.exports = {
