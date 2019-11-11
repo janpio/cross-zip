@@ -1,5 +1,7 @@
 # cross-zip
 
+[![Build status](https://travis-ci.com/toyobayashi/cross-zip.svg?branch=master)](https://travis-ci.com/toyobayashi/cross-zip/)
+
 Fork from [https://github.com/feross/cross-zip](https://github.com/feross/cross-zip)
 
 Cross-platform .zip file creation

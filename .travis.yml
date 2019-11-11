@@ -1,3 +1,24 @@
 language: node_js
 node_js:
   - lts/*
+os:
+  - windows
+  - linux
+  - osx
+before_install:
+  - node -v
+  - npm -v
+install:
+  - npm install
+script:
+  - npm test
+deploy:
+  - provider: npm
+    email: lifenglin314@outlook.com
+    api_key:
+      secure: rlk0tGBcu63wmKI1w2ATiPhlMEu6WLB/NdXQrnuVsJcHlI24UjR03O8xYhFoEDz+hPtpH0y2u3od4p0bNHCMTXL1gmn45iNjNkc4wEFUKGWWkBLiKYFoUpVV9LH7mCpQnsonsHcU0IszGE7kX65lOHWlYNFsnnGOAk8BCQRpDFp0Fk0i9L7S08nf2t4ssTaJl86NihyoXfKTbWq+83tvQ5qP6/7iUVqQQPvYg2Y2yADgBXebChepdsvO3opn2SYYORSMuWRYRuBOTsiriMVMpGXdwUMYptaSe0fzm7FrmkXq5XPKtOF/mzIkMSpLCJAVshC0Sqc4d80qUAwrAljXcelJsy2Vebiy4MlMir+ajiMLyptQh8clXInQb98ave2QWGaTIfX1bC8SXLNBSYWB8mG7Jx3Zopck6P72anYIO6ozrQlF6A0AlpEYdY0I3H99qExl3VBMLVjsk46SKEANzQku884HXH1FIlC3DTqBVzdV+Iz/M1xAIizmWWDegCecgcoo4eBLkBj1LSMUF3R/AFzfnEaOUAyFvsvaoC6LOQcA8r4137VJbzcPjbhmaoJPQdJkJsAvH+xvl9FhnbTJBUvnogMvfqdkoB1RCvLtqMB3IMTmGAP7mcXm/HkVsywefQAwmkyh7YK1ocj6ZoJyZo5Z6s5ZH0GLmAHzaPfsLN8=
+    skip_cleanup: true
+    on:
+      tags: true
+      repo: toyobayashi/cross-zip
+      condition: $TRAVIS_OS_NAME = linux
