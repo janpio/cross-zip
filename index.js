@@ -6,7 +6,7 @@ const rimraf = require('rimraf')
 
 function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
   if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, ${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }"`
+    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, $${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }"`
   } else {
     if (includeBaseDirectory) {
       const dir = path.dirname(sourceDirectoryName)
@@ -19,9 +19,32 @@ function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName
 
 function getUnzipCommand (sourceArchiveFileName, destinationDirectoryName) {
   if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8, true); }"`
+    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8, $true); }"`
   } else {
     return `unzip -o ${JSON.stringify(sourceArchiveFileName)} -d ${JSON.stringify(destinationDirectoryName)}`
+  }
+}
+
+function ensureDir (dir) {
+  if (fs.existsSync(dir)) {
+    let stats
+    try {
+      stats = fs.statSync(dir)
+      if (stats.isDirectory()) {
+        return true
+      } else {
+        return false
+      }
+    } catch (err) {
+      return false
+    }
+  }
+
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    return true
+  } catch (err) {
+    return false
   }
 }
 
@@ -31,8 +54,10 @@ function zip (input, output, includeBaseDirectory) {
       if (err) { reject(err); return }
       rimraf(output, (err) => {
         if (err) { reject(err); return }
+        if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
         if (stats.isDirectory()) {
-          cp.exec(getZipDirectoryCommand(input, output, includeBaseDirectory), (err) => {
+          const cmd = getZipDirectoryCommand(input, output, includeBaseDirectory)
+          cp.exec(cmd, (err, stdout) => {
             if (err) { reject(err); return }
             resolve()
           })
@@ -61,6 +86,7 @@ function zip (input, output, includeBaseDirectory) {
 function zipSync (input, output, includeBaseDirectory) {
   const stats = fs.statSync(input)
   rimraf.sync(output)
+  if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
     cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory))
     return
