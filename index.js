@@ -12,24 +12,80 @@ function getTempDirName () {
   return 'cross-zip-' + new ObjectId().toHexString()
 }
 
-function getZipDirectoryCommand (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
+function getZipCommand () {
   if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, $${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }"`
+    return 'powershell.exe'
+  } else {
+    return 'zip'
+  }
+}
+
+function getUnzipCommand () {
+  if (process.platform === 'win32') {
+    return 'powershell.exe'
+  } else {
+    return 'unzip'
+  }
+}
+
+function getZipDirectoryArgs (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
+  if (process.platform === 'win32') {
+    return {
+      args: [
+        '-nologo',
+        '-noprofile',
+        '-command',
+        `& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, $${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }`,
+      ],
+      cwd: process.cwd()
+    }
   } else {
     if (includeBaseDirectory) {
       const dir = path.dirname(sourceDirectoryName)
       const base = path.basename(sourceDirectoryName)
-      return `cd ${JSON.stringify(dir)} && zip -r -y ${JSON.stringify(destinationArchiveFileName)} ${JSON.stringify(base)}`
+      return {
+        args: [
+          '-r',
+          '-y',
+          destinationArchiveFileName,
+          base
+        ],
+        cwd: dir
+      }
     }
-    return `cd ${JSON.stringify(sourceDirectoryName)} && zip -r -y ${JSON.stringify(destinationArchiveFileName)} ${JSON.stringify('.')}`
+    return {
+      args: [
+        '-r',
+        '-y',
+        destinationArchiveFileName,
+        '.'
+      ],
+      cwd: sourceDirectoryName
+    }
   }
 }
 
-function getUnzipCommand (sourceArchiveFileName, destinationDirectoryName) {
+function getUnzipArgs (sourceArchiveFileName, destinationDirectoryName) {
   if (process.platform === 'win32') {
-    return `powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8); }"`
+    return {
+      args: [
+        '-nologo',
+        '-noprofile',
+        '-command',
+        `& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8); }`,
+      ],
+      cwd: process.cwd()
+    }
   } else {
-    return `unzip -o ${JSON.stringify(sourceArchiveFileName)} -d ${JSON.stringify(destinationDirectoryName)}`
+    return {
+      args: [
+        '-o',
+        sourceArchiveFileName,
+        '-d',
+        destinationDirectoryName
+      ],
+      cwd: process.cwd()
+    }
   }
 }
 
@@ -64,13 +120,14 @@ function zip (input, output, includeBaseDirectory) {
         if (err) { reject(err); return }
         if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
         if (stats.isDirectory()) {
-          cp.exec(getZipDirectoryCommand(input, output, includeBaseDirectory), execOptions, (err) => {
+          const { args, cwd } = getZipDirectoryArgs(input, output, includeBaseDirectory)
+          cp.execFile(getZipCommand(), args, { ...execOptions, cwd }, (err) => {
             if (err) { reject(err); return }
             fs.stat(output, (err, stats) => {
               if (err) { reject(err); return }
               resolve(stats.size)
             })
-          })
+          }).on('error', reject)
         } else {
           const tmpPath = path.join(os.tmpdir(), getTempDirName())
           const target = path.join(tmpPath, path.basename(input))
@@ -78,7 +135,8 @@ function zip (input, output, includeBaseDirectory) {
             if (err) { reject(err); return }
             fs.copy(input, target, (err) => {
               if (err) { reject(err); return }
-              cp.exec(getZipDirectoryCommand(tmpPath, output, false), execOptions, (err) => {
+              const { args, cwd } = getZipDirectoryArgs(tmpPath, output, false)
+              cp.execFile(getZipCommand(), args, { ...execOptions, cwd }, (err) => {
                 fs.remove(tmpPath, (err) => {
                   if (err) { reject(err); return }
                   fs.stat(output, (err, stats) => {
@@ -87,7 +145,7 @@ function zip (input, output, includeBaseDirectory) {
                   })
                 })
                 if (err) reject(err)
-              })
+              }).on('error', reject)
             })
           })
         }
@@ -101,7 +159,8 @@ function zipSync (input, output, includeBaseDirectory) {
   fs.removeSync(output)
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
-    cp.execSync(getZipDirectoryCommand(input, output, includeBaseDirectory), execOptions)
+    const { args, cwd } = getZipDirectoryArgs(input, output, includeBaseDirectory)
+    cp.execFileSync(getZipCommand(), args, { ...execOptions, cwd })
     return fs.statSync(output).size
   }
   const tmpPath = path.join(os.tmpdir(), getTempDirName())
@@ -119,7 +178,8 @@ function unzip (input, output) {
     if (process.platform === 'win32' && fs.existsSync(output)) {
       if (fs.statSync(output).isDirectory()) {
         const tmpPath = path.join(os.tmpdir(), getTempDirName())
-        cp.exec(getUnzipCommand(input, tmpPath), execOptions, function (err) {
+        const { args, cwd } = getUnzipArgs(input, tmpPath)
+        cp.execFile(getUnzipCommand(), args, { ...execOptions, cwd }, function (err) {
           if (err) { reject(err); return }
           fs.copy(tmpPath, output, (err) => {
             fs.remove(tmpPath, (err) => {
@@ -128,16 +188,17 @@ function unzip (input, output) {
             })
             if (err) reject(err)
           })
-        })
+        }).on('error', reject)
       } else {
         reject(new Error(`"${output}" is not a directory.`))
         return
       }
     } else {
-      cp.exec(getUnzipCommand(input, output), execOptions, function (err) {
+      const { args, cwd } = getUnzipArgs(input, output)
+      cp.execFile(getUnzipCommand(), args, { ...execOptions, cwd }, function (err) {
         if (err) { reject(err); return }
         resolve()
-      })
+      }).on('error', reject)
     }
   })
 }
@@ -147,14 +208,16 @@ function unzipSync (input, output) {
   if (process.platform === 'win32' && fs.existsSync(output)) {
     if (fs.statSync(output).isDirectory()) {
       const tmpPath = path.join(os.tmpdir(), getTempDirName())
-      cp.execSync(getUnzipCommand(input, tmpPath), execOptions)
+      const { args, cwd } = getUnzipArgs(input, tmpPath)
+      cp.execFileSync(getUnzipCommand(), args, { ...execOptions, cwd })
       fs.copySync(tmpPath, output)
       fs.removeSync(tmpPath)
     } else {
       throw new Error(`"${output}" is not a directory.`)
     }
   } else {
-    cp.execSync(getUnzipCommand(input, output), execOptions)
+    const { args, cwd } = getUnzipArgs(input, output)
+    cp.execFileSync(getUnzipCommand(), args, { ...execOptions, cwd })
   }
 }
 

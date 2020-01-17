@@ -75,3 +75,23 @@ describe('Zip', function () {
     assert.ok(fs.existsSync(path.join(unzipDir, 'file.txt')), 'file not exists')
   })
 })
+
+describe('Unzip', function () {
+  it('Overwrite', async function () {
+    this.timeout(Infinity)
+    const archive1 = path.join(testTmpDir, `without-base-${process.platform}.zip`)
+    const archive2 = path.join(testTmpDir, `with-base-${process.platform}.zip`)
+    const unzipDir = path.join(path.dirname(archive1), 'overwrite')
+
+    await crossZip.unzip(archive1, unzipDir)
+    await crossZip.unzip(archive2, unzipDir)
+    assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'content')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'content/subdir')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'content/file.txt')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'content/subdir/子目录文件.txt')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'subdir')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'file.txt')), 'unzip')
+    assert.ok(fs.existsSync(path.join(unzipDir, 'subdir/子目录文件.txt')), 'unzip')
+  })
+})

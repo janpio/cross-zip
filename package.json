@@ -1,7 +1,7 @@
 {
   "name": "@tybys/cross-zip",
   "description": "Cross-platform .zip file creation",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "author": {
     "name": "toyobayashi",
     "email": "lifenglin314@outlook.com"
@@ -33,7 +33,7 @@
     "test": "mocha"
   },
   "dependencies": {
-    "@tybys/oid": "^1.0.6",
+    "@tybys/oid": "^1.0.8",
     "fs-extra": "^8.1.0"
   },
   "publishConfig": {
