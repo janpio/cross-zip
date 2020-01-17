@@ -34,8 +34,15 @@ function getZipDirectoryArgs (sourceDirectoryName, destinationArchiveFileName, i
       args: [
         '-nologo',
         '-noprofile',
-        '-command',
-        `& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::CreateFromDirectory('${sourceDirectoryName}', '${destinationArchiveFileName}', 1, $${!!includeBaseDirectory}, [System.Text.Encoding]::UTF8); }`,
+        '-command', "& { " +
+          "param([String]$sourceDirectoryName, [String]$destinationArchiveFileName, [Boolean]$includeBaseDirectory); " +
+          "Add-Type -A 'System.IO.Compression.FileSystem'; " +
+          "Add-Type -A 'System.Text.Encoding'; " +
+          "[IO.Compression.ZipFile]::CreateFromDirectory($sourceDirectoryName, $destinationArchiveFileName, [IO.Compression.CompressionLevel]::Fastest, $includeBaseDirectory, [System.Text.Encoding]::UTF8); " +
+        "}",
+        '-sourceDirectoryName', sourceDirectoryName,
+        '-destinationArchiveFileName', destinationArchiveFileName,
+        '-includeBaseDirectory', `$${!!includeBaseDirectory}`
       ],
       cwd: process.cwd()
     }
@@ -71,8 +78,14 @@ function getUnzipArgs (sourceArchiveFileName, destinationDirectoryName) {
       args: [
         '-nologo',
         '-noprofile',
-        '-command',
-        `& { Add-Type -A 'System.IO.Compression.FileSystem'; Add-Type -A 'System.Text.Encoding'; [IO.Compression.ZipFile]::ExtractToDirectory('${sourceArchiveFileName}', '${destinationDirectoryName}', [System.Text.Encoding]::UTF8); }`,
+        '-command', "& { " +
+          "param([String]$sourceArchiveFileName, [String]$destinationDirectoryName); " +
+          "Add-Type -A 'System.IO.Compression.FileSystem'; " +
+          "Add-Type -A 'System.Text.Encoding'; " +
+          "[IO.Compression.ZipFile]::ExtractToDirectory($sourceArchiveFileName, $destinationDirectoryName, [System.Text.Encoding]::UTF8); " +
+        "}",
+        '-sourceArchiveFileName', sourceArchiveFileName,
+        '-destinationDirectoryName', destinationDirectoryName
       ],
       cwd: process.cwd()
     }
