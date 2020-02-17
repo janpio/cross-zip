@@ -28,6 +28,10 @@ function getUnzipCommand () {
   }
 }
 
+function quotePath (pathToTransform) {
+  return pathToTransform.indexOf(' ') !== -1 ? `"${pathToTransform}"` : pathToTransform
+}
+
 function getZipDirectoryArgs (sourceDirectoryName, destinationArchiveFileName, includeBaseDirectory) {
   if (process.platform === 'win32') {
     return {
@@ -39,9 +43,10 @@ function getZipDirectoryArgs (sourceDirectoryName, destinationArchiveFileName, i
           "Add-Type -A 'System.IO.Compression.FileSystem'; " +
           "Add-Type -A 'System.Text.Encoding'; " +
           "[IO.Compression.ZipFile]::CreateFromDirectory($sourceDirectoryName, $destinationArchiveFileName, [IO.Compression.CompressionLevel]::Fastest, $includeBaseDirectory, [System.Text.Encoding]::UTF8); " +
+          "exit !$?;" +
         "}",
-        '-sourceDirectoryName', sourceDirectoryName,
-        '-destinationArchiveFileName', destinationArchiveFileName,
+        '-sourceDirectoryName', quotePath(sourceDirectoryName),
+        '-destinationArchiveFileName', quotePath(destinationArchiveFileName),
         '-includeBaseDirectory', `$${!!includeBaseDirectory}`
       ],
       cwd: process.cwd()
@@ -83,9 +88,10 @@ function getUnzipArgs (sourceArchiveFileName, destinationDirectoryName) {
           "Add-Type -A 'System.IO.Compression.FileSystem'; " +
           "Add-Type -A 'System.Text.Encoding'; " +
           "[IO.Compression.ZipFile]::ExtractToDirectory($sourceArchiveFileName, $destinationDirectoryName, [System.Text.Encoding]::UTF8); " +
+          "exit !$?;" +
         "}",
-        '-sourceArchiveFileName', sourceArchiveFileName,
-        '-destinationDirectoryName', destinationDirectoryName
+        '-sourceArchiveFileName', quotePath(sourceArchiveFileName),
+        '-destinationDirectoryName', quotePath(destinationDirectoryName)
       ],
       cwd: process.cwd()
     }
