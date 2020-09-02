@@ -2,7 +2,7 @@ const cp = require('child_process')
 const os = require('os')
 const path = require('path')
 const fs = require('fs-extra')
-const ObjectId = require('@tybys/oid')
+const { ObjectId } = require('@tybys/oid')
 
 const execOptions = {
   maxBuffer: Infinity
