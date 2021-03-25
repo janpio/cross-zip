@@ -14,6 +14,10 @@ describe('Zip', function () {
     assert.ok(typeof size === 'number', `zip() should return Promise<number> but ${typeof size}`)
     assert.ok(fs.existsSync(archive), 'Zip failed')
     await crossZip.unzip(archive, unzipDir)
+    fs.readdirSync(path.join(unzipDir)).forEach(file => {
+      console.log(file)
+    })
+
     assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
     assert.ok(!fs.existsSync(path.join(unzipDir, 'content')), 'Base dir exists')
   })
@@ -26,6 +30,10 @@ describe('Zip', function () {
     assert.ok(typeof size === 'number', `zip() should return Promise<number> but ${typeof size}`)
     assert.ok(fs.existsSync(archive), 'Zip failed')
     await crossZip.unzip(archive, unzipDir)
+    fs.readdirSync(path.join(unzipDir)).forEach(file => {
+      console.log(file)
+    })
+
     assert.ok(fs.existsSync(unzipDir), 'Unzip failed')
     assert.ok(fs.existsSync(path.join(unzipDir, 'content')), 'Base dir not exists')
   })
