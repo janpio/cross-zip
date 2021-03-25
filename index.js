@@ -140,6 +140,7 @@ function zip (input, output, includeBaseDirectory) {
         if (!ensureDir(path.dirname(output))) { reject(new Error(`"${path.dirname(output)}" is not a directory`)); return }
         if (stats.isDirectory()) {
           const { args, cwd } = getZipDirectoryArgs(input, output, includeBaseDirectory)
+          console.log("zip command:", getZipCommand(), args, cwd)
           cp.execFile(getZipCommand(), args, { ...execOptions, cwd }, (err) => {
             if (err) { reject(err); return }
             fs.stat(output, (err, stats) => {
@@ -179,6 +180,7 @@ function zipSync (input, output, includeBaseDirectory) {
   if (!ensureDir(path.dirname(output))) throw new Error(`"${path.dirname(output)}" is not a directory`)
   if (stats.isDirectory()) {
     const { args, cwd } = getZipDirectoryArgs(input, output, includeBaseDirectory)
+    console.log("zip command:", getZipCommand(), args, cwd)
     cp.execFileSync(getZipCommand(), args, { ...execOptions, cwd })
     return fs.statSync(output).size
   }
